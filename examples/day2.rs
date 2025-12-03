@@ -19,12 +19,23 @@ fn main() {
 }
 
 fn predicate(num: &u64) -> bool {
-    let (l, r) = split(*num);
-    l == r
-}
+    let digits: Box<_> = num.to_string().bytes().map(|b| b - b'0').collect();
 
-fn split(x: u64) -> (u64, u64) {
-    let halflen = x.ilog10().div_ceil(2);
-    let mag = 10u64.pow(halflen);
-    (x / mag, x % mag)
+    'outer: for i in 1..=digits.len() / 2 {
+        if digits.len() % i != 0 {
+            continue;
+        }
+
+        let pat: Box<_> = digits.iter().take(i).cloned().collect();
+
+        for i in pat.len()..digits.len() {
+            if digits[i] != pat[i % pat.len()] {
+                continue 'outer;
+            }
+        }
+
+        return true;
+    }
+
+    false
 }
