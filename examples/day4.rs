@@ -1,8 +1,6 @@
 use std::{
-    convert::Infallible,
     fs,
     ops::{Index, IndexMut},
-    str::FromStr,
 };
 
 const OFFSETS: [(isize, isize); 8] = [
@@ -20,33 +18,51 @@ fn main() {
     const FILE_PATH: &str = "input/day4.txt";
     let contents = fs::read_to_string(FILE_PATH).unwrap();
 
-    let grid = grid_from_text(contents, |c| c == '@');
+    let mut grid = grid_from_text(contents, |c| c == '@');
 
-    let mut sum = 0;
-    for y in 0..grid.height {
-        for x in 0..grid.width {
-            if !grid[(x, y)] {
-                continue;
-            }
+    let mut total_removed = 0;
+    loop {
+        let mut removed = 0;
+        for y in 0..grid.height {
+            for x in 0..grid.width {
+                if !grid[(x, y)] {
+                    continue;
+                }
 
-            let count: u8 = OFFSETS
-                .iter()
-                .filter_map(|(dx, dy)| {
-                    let x = (x as isize + dx).try_into().ok()?;
-                    let y = (y as isize + dy).try_into().ok()?;
+                let count: u8 = OFFSETS
+                    .iter()
+                    .filter_map(|(dx, dy)| {
+                        let x = (x as isize + dx).try_into().ok()?;
+                        let y = (y as isize + dy).try_into().ok()?;
 
-                    let val = grid.get((x, y))?;
-                    val.then_some(1)
-                })
-                .sum();
+                        let val = grid.get((x, y))?;
+                        val.then_some(1)
+                    })
+                    .sum();
 
-            if count < 4 {
-                sum += 1;
+                if count < 4 {
+                    grid[(x, y)] = false;
+                    removed += 1;
+                }
             }
         }
+
+        if removed == 0 {
+            break;
+        }
+
+        total_removed += removed;
     }
 
-    println!("reachable: {sum}")
+    println!(
+        "{}",
+        grid_to_text(grid, |b| match b {
+            true => '@',
+            false => ' ',
+        })
+    );
+
+    println!("removed: {total_removed}")
 }
 
 fn grid_from_text<T: Default + Clone>(text: String, f: impl Fn(char) -> T) -> Grid<T> {
