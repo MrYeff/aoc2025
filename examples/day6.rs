@@ -20,27 +20,39 @@ fn main() {
         })
         .collect();
 
-    let mut out: Box<[u64]> = lines
-        .next()
-        .unwrap()
-        .split_whitespace()
-        .map(|x| x.parse().unwrap())
-        .collect();
+    let mut lines: Box<_> = lines.map(|line| line.chars()).collect();
 
-    for line in lines {
-        for (i, x) in line
-            .split_whitespace()
-            .map(|x| x.parse::<u64>().unwrap())
-            .enumerate()
-        {
-            match ops[i] {
-                Op::Add => out[i] += x,
-                Op::Mul => out[i] *= x,
+    let mut checksum: u64 = 0;
+    for op in ops.into_iter() {
+        let mut y = None;
+        'outer: loop {
+            let mut x_str = String::with_capacity(lines.len());
+            for line in lines.iter_mut() {
+                let Some(c) = line.next() else {
+                    break 'outer;
+                };
+
+                x_str.push(c);
+            }
+
+            let x_str = x_str.trim();
+            if x_str.is_empty() {
+                break;
+            }
+
+            let x: u64 = x_str.parse().unwrap();
+
+            match y.as_mut() {
+                Some(y) => match op {
+                    Op::Add => *y += x,
+                    Op::Mul => *y *= x,
+                },
+                None => y = Some(x),
             }
         }
+        checksum += y.unwrap();
     }
 
-    let checksum: u64 = out.into_iter().sum();
     println!("checksum {checksum}");
 }
 
