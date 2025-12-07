@@ -11,32 +11,31 @@ fn main() {
         .unwrap()
         .as_bytes()
         .iter()
-        .map(|b| *b == b'S')
+        .map(|b| (*b == b'S') as u64)
         .collect();
 
-    let mut state: Box<_> = repeat(false).take(prev_state.len()).collect();
-    let mut splits = 0;
+    let mut state: Box<_> = repeat(0).take(prev_state.len()).collect();
 
     for line in lines {
         for (i, (ps, b)) in prev_state.iter().zip(line.bytes()).enumerate() {
-            if !ps {
+            if *ps == 0 {
                 continue;
             }
             match b {
-                b'.' => state[i] = true,
+                b'.' => state[i] += ps,
                 b'^' => {
-                    splits += 1;
-                    state[i - 1] = true;
-                    state[i + 1] = true;
+                    state[i - 1] += ps;
+                    state[i + 1] += ps;
                 }
                 _ => {}
             }
         }
         mem::swap(&mut prev_state, &mut state);
-        state.iter_mut().for_each(|s| *s = false);
+        state.iter_mut().for_each(|s| *s = 0);
     }
 
-    println!("splits {splits}")
+    let world_count: u64 = prev_state.into_iter().sum();
+    println!("worlds {world_count}")
 }
 
 #[cfg(test)]
