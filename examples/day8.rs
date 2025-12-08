@@ -1,12 +1,10 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    iter::repeat,
 };
 
 fn main() {
     const FILE_PATH: &str = "input/day8.txt";
-    const CONNECTION_COUNT: usize = 1000;
     let contents = fs::read_to_string(FILE_PATH).unwrap();
 
     let points: Box<[(u64, u64, u64)]> = contents
@@ -27,24 +25,27 @@ fn main() {
 
     let mut circuits: Vec<Option<HashSet<(u64, u64, u64)>>> = Vec::new();
     let mut circuit_refs: HashMap<(u64, u64, u64), usize> = HashMap::new();
+    let mut last_con_xs = (0, 0);
 
-    for (a, b) in pairs.iter().take(CONNECTION_COUNT) {
-        //
+    for (a, b) in pairs.iter() {
         match (circuit_refs.contains_key(a), circuit_refs.contains_key(b)) {
             (true, false) => {
                 let ac = circuit_refs.get(a).unwrap();
                 circuits[*ac].as_mut().unwrap().insert(*b);
                 circuit_refs.insert(*b, *ac);
+                last_con_xs = (a.0, b.0);
             }
             (false, true) => {
                 let bc = circuit_refs.get(b).unwrap();
                 circuits[*bc].as_mut().unwrap().insert(*a);
                 circuit_refs.insert(*a, *bc);
+                last_con_xs = (a.0, b.0);
             }
             (false, false) => {
                 circuits.push(Some([*a, *b].into_iter().collect()));
                 circuit_refs.insert(*a, circuits.len() - 1);
                 circuit_refs.insert(*b, circuits.len() - 1);
+                last_con_xs = (a.0, b.0);
             }
             (true, true) => {
                 let ac = *circuit_refs.get(a).unwrap();
@@ -53,6 +54,7 @@ fn main() {
                 if ac == bc {
                     continue;
                 }
+                last_con_xs = (a.0, b.0);
 
                 for bcp in circuits[bc].take().unwrap() {
                     *circuit_refs.get_mut(&bcp).unwrap() = ac;
@@ -62,18 +64,7 @@ fn main() {
         }
     }
 
-    let mut lens: Vec<_> = circuits
-        .into_iter()
-        .filter_map(|v| v.map(|xs| xs.len()))
-        .collect();
-
-    lens.sort();
-    let result = lens
-        .into_iter()
-        .rev()
-        .chain(repeat(1))
-        .take(3)
-        .fold(1, |acc, x| acc * x);
+    let result = last_con_xs.0 * last_con_xs.1;
 
     println!("result: {result}")
 }
