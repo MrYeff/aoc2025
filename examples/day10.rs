@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::{fmt::Debug, fs};
+use std::{fmt::Debug, fs, iter::repeat};
 
 //[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 
@@ -18,8 +18,8 @@ fn extract_machine(s: &str) -> Machine {
 
     let target = s[1..s.len() - 1]
         .bytes()
-        .rev()
-        .fold(0, |acc, x| acc << 1 | (x == b'#') as u32);
+        .map(|x| (x == b'#') as u32)
+        .collect();
 
     let splt = splt.rev().skip(1);
 
@@ -28,15 +28,17 @@ fn extract_machine(s: &str) -> Machine {
     Machine { target, buttons }
 }
 
-fn extract_button(s: &str) -> u32 {
+fn extract_button(s: &str) -> Box<[usize]> {
     s[1..s.len() - 1]
         .split(',')
-        .map(|x| x.parse::<u32>().unwrap())
-        .fold(0, |acc, x| acc | 1 << x)
+        .map(|x| x.parse::<usize>().unwrap())
+        .collect()
 }
 
 fn search(m: Machine) -> usize {
-    if m.target == 0 {
+    let state_0: Box<[u32]> = repeat(0).take(m.target.len()).collect();
+
+    if m.target.iter().all(|x| *x == 0) {
         return 0;
     }
 
@@ -44,8 +46,12 @@ fn search(m: Machine) -> usize {
         if m.buttons
             .iter()
             .combinations(d)
-            .map(|seq| seq.iter().fold(0, |acc, x| acc ^ **x))
-            .any(|x| x == m.target)
+            .map(|seq| {
+                let mut acc = state_0.clone();
+                seq.iter().for_each(|x| apply_button(acc.as_mut(), x));
+                acc
+            })
+            .any(|s| validate_target(&m.target, &s))
         {
             return d;
         }
@@ -54,19 +60,16 @@ fn search(m: Machine) -> usize {
     unreachable!("unsolvable")
 }
 
-struct Machine {
-    target: u32,
-    buttons: Vec<u32>,
+fn validate_target(ts: &[u32], xs: &[u32]) -> bool {
+    ts.iter().zip(xs.iter()).all(|(t, x)| *t == *x)
 }
 
-impl Debug for Machine {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Machine")
-            .field("target", &format_args!("{:b}", self.target))
-            .field(
-                "buttons",
-                &self.buttons.iter().map(|x| format!("{:b}", x)).join(", "),
-            )
-            .finish()
-    }
+fn apply_button(ss: &mut [u32], xs: &[usize]) {
+    xs.iter().for_each(|x| ss[*x] = (ss[*x] + 1) % 2);
+}
+
+#[derive(Debug)]
+struct Machine {
+    target: Box<[u32]>,
+    buttons: Vec<Box<[usize]>>,
 }
