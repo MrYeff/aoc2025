@@ -1,10 +1,9 @@
-use itertools::Itertools;
-use std::{fmt::Debug, fs, iter::repeat, marker::PhantomData};
+use std::{collections::HashSet, fmt::Debug, fs};
 
 //[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 
 fn main() {
-    const FILE_PATH: &str = "input/example/day10.txt";
+    const FILE_PATH: &str = "input/day10.txt";
     let contents = fs::read_to_string(FILE_PATH).unwrap();
 
     let clicks: u32 = contents.lines().map(extract_machine).map(search).sum();
@@ -35,51 +34,57 @@ fn extract_button(s: &str) -> Box<[usize]> {
 }
 
 fn search(m: Machine) -> u32 {
-    let state_0: Box<[u32]> = repeat(0).take(m.target.len()).collect();
-
-    if m.target.iter().all(|x| *x == 0) {
+    if check_0(&m.target) {
         return 0;
     }
 
-    for d in 1..u32::MAX {
-        if distributions(d, m.buttons.len())
-            .map(|dst| {
-                let mut acc = state_0.clone();
-                m.buttons
-                    .iter()
-                    .zip(dst.into_iter())
-                    .for_each(|(x, amo)| apply_button(acc.as_mut(), x, amo));
-                acc
-            })
-            .any(|s| validate_target(&m.target, &s))
+    let mut d = 1;
+    let mut history = HashSet::new();
+    let mut states = vec![m.target.clone()];
+    loop {
+        for state in states
+            .drain(0..states.len())
+            .collect::<Box<_>>()
+            .into_iter()
         {
-            return d;
+            for butt in m.buttons.iter() {
+                if let Some(state) = apply_button(&state, &butt) {
+                    if check_0(&state) {
+                        return d;
+                    }
+
+                    if !history.contains(&state) {
+                        states.push(state);
+                    }
+                }
+            }
+
+            history.insert(state);
         }
+
+        states.sort();
+        states.dedup();
+
+        d += 1;
+
+        println!("Histroy {}", history.len())
     }
-
-    unreachable!("unsolvable")
 }
 
-fn distributions(amo: u32, buckets: usize) -> Box<dyn Iterator<Item = Box<[u32]>>> {
-    if amo == 0 {
-        return Box::new(std::iter::once(repeat(0).take(buckets).collect()));
-    };
-
-    Box::new((0..buckets).flat_map(move |b| {
-        let dsts = distributions(amo - 1, buckets);
-        dsts.map(move |mut dst| {
-            dst[b] += 1;
-            dst
-        })
-    }))
+fn check_0(state: &[u32]) -> bool {
+    state.iter().all(|x| *x == 0)
 }
 
-fn validate_target(ts: &[u32], xs: &[u32]) -> bool {
-    ts.iter().zip(xs.iter()).all(|(t, x)| *t == *x)
-}
+fn apply_button(state: &[u32], butt: &[usize]) -> Option<Box<[u32]>> {
+    let mut state: Box<[u32]> = Box::from(state);
+    for x in butt {
+        let Some(s) = state[*x].checked_sub(1) else {
+            return None;
+        };
 
-fn apply_button(ss: &mut [u32], xs: &[usize], amo: u32) {
-    xs.iter().for_each(|x| ss[*x] += amo);
+        state[*x] = s
+    }
+    Some(state)
 }
 
 #[derive(Debug)]
