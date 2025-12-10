@@ -1,9 +1,11 @@
-use std::{collections::HashSet, fmt::Debug, fs};
+use std::{collections::HashMap, fmt::Debug, fs, iter::repeat};
+
+use itertools::{Either, Itertools};
 
 //[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 
 fn main() {
-    const FILE_PATH: &str = "input/day10.txt";
+    const FILE_PATH: &str = "input/example/day10.txt";
     let contents = fs::read_to_string(FILE_PATH).unwrap();
 
     let clicks: u32 = contents.lines().map(extract_machine).map(search).sum();
@@ -38,36 +40,43 @@ fn search(m: Machine) -> u32 {
         return 0;
     }
 
-    let mut d = 1;
-    let mut history = HashSet::new();
-    let mut states = vec![m.target.clone()];
-    loop {
-        for state in states
-            .drain(0..states.len())
-            .collect::<Box<_>>()
-            .into_iter()
-        {
-            for butt in m.buttons.iter() {
-                if let Some(state) = apply_button(&state, &butt) {
-                    if check_0(&state) {
-                        return d;
-                    }
+    // let mut history: HashMap<Box<[u32]>, u32> = once((m.target.clone(), 0)).collect();
+    let mut history: HashMap<Box<[u32]>, u32> = HashMap::with_capacity(100000);
+    history.insert(m.target.clone(), 0);
+    let goal: Box<[u32]> = repeat(0).take(m.target.len()).collect();
 
-                    if !history.contains(&state) {
-                        states.push(state);
-                    }
-                }
-            }
+    down(&m, &mut history, &goal, &m.target, 1);
 
-            history.insert(state);
+    *history.get(&goal).unwrap()
+}
+
+fn down(m: &Machine, history: &mut HashMap<Box<[u32]>, u32>, goal: &[u32], state: &[u32], d: u32) {
+    if let Some(d_best) = history.get(goal) {
+        if d >= *d_best {
+            return;
         }
+    }
 
-        states.sort();
-        states.dedup();
+    let (prevs, mut news): (Vec<_>, Vec<_>) = m
+        .buttons
+        .iter()
+        .filter_map(|butt| apply_button(&state, &butt))
+        .partition_map(|state| match history.get(&state) {
+            Some(d) => Either::Left((state, *d)),
+            None => Either::Right(state),
+        });
 
-        d += 1;
+    prevs
+        .into_iter()
+        .filter(|(_, d_prev)| *d_prev > d)
+        .for_each(|(prev, _)| {
+            history.insert(prev, d);
+        });
 
-        println!("Histroy {}", history.len())
+    news.sort_by_key(|state| state.iter().sum::<u32>());
+    for new in news.into_iter() {
+        history.insert(new.clone(), d + 1);
+        down(m, history, goal, &new, d + 1);
     }
 }
 
