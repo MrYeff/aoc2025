@@ -4,20 +4,32 @@ fn main() {
     let contents = fs::read_to_string(FILE_PATH).unwrap();
     let dependents: HashMap<Sid, Vec<Sid>> = contents.lines().map(extract_server).collect();
 
-    const START: Sid = Sid("you");
+    const START: Sid = Sid("svr");
     const GOAL: Sid = Sid("out");
+    const HOP_A: Sid = Sid("dac");
+    const HOP_B: Sid = Sid("fft");
 
-    let mut mem: HashMap<Sid, u32> = once((GOAL, 1)).collect();
+    let mut mem: HashMap<Sid, u64> = once((GOAL, 1)).collect();
+    let hop_a1 = solve(&mut mem, &dependents, HOP_A);
+    let hop_b1 = solve(&mut mem, &dependents, HOP_B);
+
+    let mut mem: HashMap<Sid, u64> = once((HOP_A, hop_a1)).collect();
+    let hop_b2 = solve(&mut mem, &dependents, HOP_B);
+
+    let mut mem: HashMap<Sid, u64> = once((HOP_B, hop_b1)).collect();
+    let hop_a2 = solve(&mut mem, &dependents, HOP_A);
+
+    let mut mem: HashMap<Sid, u64> = [(HOP_A, hop_a2), (HOP_B, hop_b2)].into_iter().collect();
     let result = solve(&mut mem, &dependents, START);
 
     println!("result {result}")
 }
 
 fn solve<'a>(
-    mem: &mut HashMap<Sid<'a>, u32>,
+    mem: &mut HashMap<Sid<'a>, u64>,
     dependents: &'a HashMap<Sid, Vec<Sid>>,
     x: Sid<'a>,
-) -> u32 {
+) -> u64 {
     if let Some(y) = mem.get(&x) {
         return *y;
     }
