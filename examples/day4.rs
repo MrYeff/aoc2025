@@ -117,10 +117,6 @@ impl<T> Grid<T> {
     fn get(&self, (x, y): (usize, usize)) -> Option<&T> {
         (x < self.width && y < self.height).then(|| &self[(x, y)])
     }
-
-    fn get_mut(&mut self, (x, y): (usize, usize)) -> Option<&mut T> {
-        (x < self.width && y < self.height).then(|| &mut self[(x, y)])
-    }
 }
 
 impl<T> Index<(usize, usize)> for Grid<T> {
