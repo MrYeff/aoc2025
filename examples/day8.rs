@@ -11,17 +11,21 @@ fn main() {
     const FILE_PATH: &str = "input/day8.txt";
     let contents = fs::read_to_string(FILE_PATH).unwrap();
 
-    let boxes: Vec<CBox> = contents.lines().map(extract_box).collect();
+    let boxes = || contents.lines().map(extract_box);
 
-    let mut pairs: Vec<(CBox, CBox)> = boxes.iter().cloned().tuple_combinations().collect();
-    pairs.sort_by_key(|(a, b)| dist_mag(a, b));
+    let pairs = || {
+        let mut pairs: Vec<(CBox, CBox)> = boxes().tuple_combinations().collect();
+        pairs.sort_by_key(|(a, b)| dist_mag(a, b));
+        pairs.into_iter()
+    };
 
-    let mut grid = Grid::new();
-    let (last_a, last_b) = pairs
-        .iter()
-        .filter(|(a, b)| grid.connect_boxes(a, b))
-        .last()
-        .unwrap();
+    let (last_a, last_b) = {
+        let mut grid = Grid::new();
+        pairs()
+            .filter(|(a, b)| grid.connect_boxes(a, b))
+            .last()
+            .unwrap()
+    };
 
     let result = last_a.0 * last_b.0;
     println!("result: {result}")

@@ -9,20 +9,20 @@
 
 ### A
 
-- day3
-- day7
+- day8
 
 ### B
 
 - day2
+- day3
 - day5
 - day6
+- day7
 
 ### C
 
 - day1
 - day4
-- day8
 
 ### D
 
