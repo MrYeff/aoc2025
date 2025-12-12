@@ -25,71 +25,17 @@ fn main() {
 
     pairs.sort_by_key(|(a, b)| dist_mag(a, b));
 
-    let mut circuits: Vec<Option<HashSet<CBox>>> = Vec::new();
-    let mut circuit_refs: HashMap<CBox, usize> = HashMap::new();
+    let mut grid = Grid::new();
 
     let (last_a, last_b) = pairs
         .iter()
-        .filter(|(a, b)| connect_boxes(&mut circuits, &mut circuit_refs, a, b))
+        .filter(|(a, b)| grid.connect_boxes(a, b))
         .last()
         .unwrap();
 
     let result = last_a.0 * last_b.0;
 
     println!("result: {result}")
-}
-
-/// connect the 2 boxes and return if a and b where not previously unconnected
-fn connect_boxes(
-    circuits: &mut Vec<Option<HashSet<CBox>>>,
-    circuit_refs: &mut HashMap<CBox, usize>,
-    a: &CBox,
-    b: &CBox,
-) -> bool {
-    match (circuit_refs.get(a).copied(), circuit_refs.get(b).copied()) {
-        (Some(ac), None) => insert_into_circuit(circuits, circuit_refs, ac, *b),
-        (None, Some(bc)) => insert_into_circuit(circuits, circuit_refs, bc, *a),
-        (None, None) => new_circuit(circuits, circuit_refs, *a, *b),
-        (Some(ac), Some(bc)) if ac == bc => return false,
-        (Some(ac), Some(bc)) => overwrite(circuits, circuit_refs, ac, bc),
-    }
-    true
-}
-
-fn insert_into_circuit(
-    circuits: &mut Vec<Option<HashSet<CBox>>>,
-    circuit_refs: &mut HashMap<CBox, usize>,
-    c: usize,
-    x: CBox,
-) {
-    circuits[c].as_mut().unwrap().insert(x);
-    circuit_refs.insert(x, c);
-}
-
-fn new_circuit(
-    circuits: &mut Vec<Option<HashSet<CBox>>>,
-    circuit_refs: &mut HashMap<CBox, usize>,
-    a: CBox,
-    b: CBox,
-) {
-    circuits.push(Some([a, b].into_iter().collect()));
-    let idx = circuits.len() - 1;
-    circuit_refs.insert(a, idx);
-    circuit_refs.insert(b, idx);
-}
-
-fn overwrite(
-    circuits: &mut Vec<Option<HashSet<CBox>>>,
-    circuit_refs: &mut HashMap<CBox, usize>,
-    new: usize,
-    prev: usize,
-) {
-    let prev_boxes_b = circuits[prev].take().unwrap();
-
-    for bcp in prev_boxes_b {
-        *circuit_refs.get_mut(&bcp).unwrap() = new;
-        circuits[new].as_mut().unwrap().insert(bcp);
-    }
 }
 
 fn dist_mag((x1, y1, z1): &CBox, (x2, y2, z2): &CBox) -> u64 {
@@ -100,8 +46,52 @@ fn dist_mag((x1, y1, z1): &CBox, (x2, y2, z2): &CBox) -> u64 {
     dx * dx + dy * dy + dz * dz
 }
 
-#[cfg(test)]
-mod tests {
-    pub use super::*;
-    use test_case::test_case;
+struct Grid {
+    circuits: Vec<Option<HashSet<CBox>>>,
+    circuit_refs: HashMap<CBox, usize>,
+}
+
+impl Grid {
+    pub fn new() -> Self {
+        Self {
+            circuits: Vec::new(),
+            circuit_refs: HashMap::new(),
+        }
+    }
+
+    /// connect the 2 boxes and return if a and b where not previously unconnected
+    pub fn connect_boxes(&mut self, a: &CBox, b: &CBox) -> bool {
+        match (
+            self.circuit_refs.get(a).copied(),
+            self.circuit_refs.get(b).copied(),
+        ) {
+            (Some(ac), None) => self.insert_into_circuit(ac, *b),
+            (None, Some(bc)) => self.insert_into_circuit(bc, *a),
+            (None, None) => self.new_circuit(*a, *b),
+            (Some(ac), Some(bc)) if ac == bc => return false,
+            (Some(ac), Some(bc)) => self.overwrite(ac, bc),
+        }
+        true
+    }
+
+    fn insert_into_circuit(&mut self, c: usize, x: CBox) {
+        self.circuits[c].as_mut().unwrap().insert(x);
+        self.circuit_refs.insert(x, c);
+    }
+
+    fn new_circuit(&mut self, a: CBox, b: CBox) {
+        self.circuits.push(Some([a, b].into_iter().collect()));
+        let idx = self.circuits.len() - 1;
+        self.circuit_refs.insert(a, idx);
+        self.circuit_refs.insert(b, idx);
+    }
+
+    fn overwrite(&mut self, new: usize, prev: usize) {
+        let prev_boxes_b = self.circuits[prev].take().unwrap();
+
+        for bcp in prev_boxes_b {
+            *self.circuit_refs.get_mut(&bcp).unwrap() = new;
+            self.circuits[new].as_mut().unwrap().insert(bcp);
+        }
+    }
 }
