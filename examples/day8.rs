@@ -3,30 +3,20 @@ use std::{
     fs,
 };
 
+use itertools::Itertools;
+
 type CBox = (u64, u64, u64);
 
 fn main() {
     const FILE_PATH: &str = "input/day8.txt";
     let contents = fs::read_to_string(FILE_PATH).unwrap();
 
-    let points: Box<[CBox]> = contents
-        .lines()
-        .map(|l| {
-            let mut s = l.split(',').map(|n| n.parse().unwrap());
-            (s.next().unwrap(), s.next().unwrap(), s.next().unwrap())
-        })
-        .collect();
+    let boxes: Vec<CBox> = contents.lines().map(extract_box).collect();
 
-    let mut pairs: Vec<_> = points
-        .iter()
-        .enumerate()
-        .flat_map(|(i, &a)| points[i + 1..].iter().map(move |&b| (a, b)))
-        .collect();
-
+    let mut pairs: Vec<(CBox, CBox)> = boxes.iter().cloned().tuple_combinations().collect();
     pairs.sort_by_key(|(a, b)| dist_mag(a, b));
 
     let mut grid = Grid::new();
-
     let (last_a, last_b) = pairs
         .iter()
         .filter(|(a, b)| grid.connect_boxes(a, b))
@@ -34,8 +24,12 @@ fn main() {
         .unwrap();
 
     let result = last_a.0 * last_b.0;
-
     println!("result: {result}")
+}
+
+fn extract_box(l: &str) -> CBox {
+    let mut s = l.split(',').map(|n| n.parse().unwrap());
+    (s.next().unwrap(), s.next().unwrap(), s.next().unwrap())
 }
 
 fn dist_mag((x1, y1, z1): &CBox, (x2, y2, z2): &CBox) -> u64 {
