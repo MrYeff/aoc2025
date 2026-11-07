@@ -3,9 +3,10 @@ name = "edition2025"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-
 [dev-dependencies]
 test-case = "3.3.1"
 itertools = "0.14.0"
 regex = "1.12.2"
+
+[dependencies]
+derive_more = { version = "2.1.1", features = ["full"] }
