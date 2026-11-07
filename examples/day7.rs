@@ -1,8 +1,9 @@
-use edition2025::U256;
-use std::fs;
+use std::{collections::HashSet, fs};
 
 fn main() {
     const FILE_PATH: &str = "input/day7.txt";
+    const LINE_LEN: usize = 142;
+
     let contents = fs::read_to_string(FILE_PATH).unwrap();
 
     // Parsing
@@ -10,23 +11,35 @@ fn main() {
     let mut lines = contents.lines().step_by(2);
     let start: usize = lines.by_ref().next().unwrap().find('S').unwrap();
 
-    let splitters = lines.map(|l: &str| {
-        l.match_indices('^')
-            .map(|(i, _)| i)
-            .fold(U256::ZERO, |acc, x| acc | U256::ONE << x)
-    });
+    let splitters =
+        lines.map(|l: &str| l.match_indices('^').map(|(i, _)| i).collect::<HashSet<_>>());
 
     // Solve
 
-    let mut beams = U256::ONE << start;
+    let mut beams = vec![false; LINE_LEN];
+    beams[start] = true;
+
     let splits: usize = splitters
-        .map(move |mask| {
-            let passes = beams & !mask;
-            let hits = beams & mask;
+        .map(|mask| {
+            let mut beams_next = vec![false; LINE_LEN];
 
-            beams = hits >> 1 | hits << 1 | passes;
+            let mut splits = 0;
+            (0..LINE_LEN).for_each(|x| {
+                if beams[x] == false {
+                    return;
+                }
 
-            hits.count_ones()
+                if mask.contains(&x) {
+                    beams_next[x - 1] |= beams[x];
+                    beams_next[x + 1] |= beams[x];
+                    splits += 1;
+                } else {
+                    beams_next[x] |= beams[x];
+                }
+            });
+
+            beams = beams_next;
+            splits
         })
         .sum();
 
