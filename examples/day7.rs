@@ -16,32 +16,29 @@ fn main() {
 
     // Solve
 
-    let mut beams = vec![false; LINE_LEN];
-    beams[start] = true;
+    let mut beams = vec![0; LINE_LEN];
+    beams[start] = 1;
 
-    let splits: usize = splitters
-        .map(|mask| {
-            let mut beams_next = vec![false; LINE_LEN];
+    splitters.for_each(|mask| {
+        let mut beams_next = vec![0; LINE_LEN];
 
-            let mut splits = 0;
-            (0..LINE_LEN).for_each(|x| {
-                if beams[x] == false {
-                    return;
-                }
+        (0..LINE_LEN).for_each(|x| {
+            if beams[x] == 0 {
+                return;
+            }
 
-                if mask.contains(&x) {
-                    beams_next[x - 1] |= beams[x];
-                    beams_next[x + 1] |= beams[x];
-                    splits += 1;
-                } else {
-                    beams_next[x] |= beams[x];
-                }
-            });
+            if mask.contains(&x) {
+                beams_next[x - 1] += beams[x];
+                beams_next[x + 1] += beams[x];
+            } else {
+                beams_next[x] += beams[x];
+            }
+        });
 
-            beams = beams_next;
-            splits
-        })
-        .sum();
+        beams = beams_next;
+    });
+
+    let splits = beams.iter().sum::<usize>();
 
     println!("Total splits: {}", splits);
 }
